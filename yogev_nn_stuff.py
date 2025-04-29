@@ -84,49 +84,53 @@ test_loss, test_acc = model.evaluate(X_test, y_test)
 print(f'Test accuracy after modification: {test_acc}')
 
 # -------------------------------
-# Step 12: Test top 20 eigenvectors’ importance
+# Step 12 (revised): Test importance of first 50 eigenvectors and plot results
 # -------------------------------
+import matplotlib.pyplot as plt
 
-# 1) Save original weights & compute baseline accuracy
+# 1) Save original weights & baseline accuracy
 original_weights = model.get_weights()
 baseline_acc = model.evaluate(X_test, y_test, verbose=0)[1]
 
-# 2) Identify the indices of the top 20 eigenvalues (largest → smallest)
-top20_idx = np.argsort(eigenvalues)[-20:][::-1]  # descending order
+# 2) Decide how many eigenvectors to test
+num_to_test = 50
+indices = np.arange(num_to_test)
 
-# 3) Loop over those top 20 eigenvectors
-accuracy_drops_top20 = []
-for i in top20_idx:
+# 3) Allocate list for accuracy drops
+accuracy_drops = []
+
+# 4) Loop over just those first 50 eigenvectors
+for i in indices:
     # a) Zero out the i-th eigenvalue
-    modified_eigs = eigenvalues.copy()
-    modified_eigs[i] = 0
+    mod_eigs = eigenvalues.copy()
+    mod_eigs[i] = 0
 
     # b) Reconstruct the filtered Laplacian
-    filtered_mat = eigenvectors @ np.diag(modified_eigs) @ eigenvectors.T
+    filt = eigenvectors @ np.diag(mod_eigs) @ eigenvectors.T
 
-    # c) Apply to first layer’s weights
-    W1_filtered = W1 @ filtered_mat
+    # c) Apply it to the first layer’s weights
+    W1_filtered = W1 @ filt
 
     # d) Swap in modified weights
-    temp_weights = original_weights.copy()
-    temp_weights[0] = W1_filtered
-    model.set_weights(temp_weights)
+    new_weights = original_weights.copy()
+    new_weights[0] = W1_filtered
+    model.set_weights(new_weights)
 
     # e) Evaluate and record drop
     _, acc_mod = model.evaluate(X_test, y_test, verbose=0)
-    accuracy_drops_top20.append(baseline_acc - acc_mod)
+    accuracy_drops.append(baseline_acc - acc_mod)
 
-# 4) Restore original weights
+# 5) Restore the original weights
 model.set_weights(original_weights)
 
-# 5) Plot importance of those top 20 components
+# 6) Plot results for only those 50 components
 plt.figure(figsize=(10, 6))
-plt.bar(range(20), accuracy_drops_top20)
-plt.xticks(range(20), top20_idx, rotation=45)
-plt.xlabel("Eigenvector index")
+plt.plot(indices, accuracy_drops, marker='o')
+plt.xticks(indices)  # or plt.xticks(indices, rotation=90) if crowded
+plt.xlabel("Eigenvector index (0–49)")
 plt.ylabel("Accuracy drop when removed")
-plt.title("Importance of Top 20 Spectral Components")
-plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.title("Importance of First 50 Spectral Components")
+plt.grid(True)
 plt.tight_layout()
 plt.show()
 
