@@ -17,3 +17,9 @@ for i in range(8):
     type_string = 'weights' * (i%2 == 0) + 'biases' * (i%2 == 1)
     #params will have elements weights_0, biases_0, weights_1, biases_1, weights_2, biases_2, weights_3, biases_3
     params.append(np.load(dir +"nn_" + type_string + "_layer_" + str(int(i/2)) + ".npy", ))
+
+#create a list of weight matrices
+weights = [params[2*i] for i in range(4)]
+
+#and a list of biases
+bias = [params[2*i + 1] for i in range(4)]
