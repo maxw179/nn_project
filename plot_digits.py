@@ -3,10 +3,11 @@
 # -------------------------------
 
 from matplotlib import pyplot as plt
-from tensorflow.keras import layers, models
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
+import tensorflow_datasets as tfds
+import tensorflow as tf
+import numpy as np
 
+'''
 # load the MNIST dataset
 mnist = fetch_openml("mnist_784", version=1)
 images = mnist.data.astype(np.float32)
@@ -17,42 +18,61 @@ images /= 255.0
 
 #create a test set
 images_train, images_test, labels_train, labels_test = train_test_split(images, labels, test_size=0.2, random_state=42)
-
+'''
+#load the mnist numbers dataset
+#KEEP THE SEED AT 1234
+read_config = tfds.ReadConfig(shuffle_seed=1234)
+(ds_train, ds_test), ds_info = tfds.load(
+    "mnist",
+    split=["train", "test"],
+    shuffle_files=True,
+    as_supervised=True,
+    with_info=True,
+    read_config=read_config,
+)
 
 def plot_digits(weights):
-    """this function takes in a list of weights (i.e. a list of one numpy array for each layer)
-    and graphs the accuracy for classifying each digit"""
+    """this function takes in a list of weights and graphs per-digit accuracy on ds_test"""
 
-    #first initialize the model
+    # 1) build & set up your model
     model = tf.keras.models.Sequential([
-    tf.keras.layers.Flatten(input_shape=(28, 28)),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(28, activation='relu'),
-    tf.keras.layers.Dense(10)
+        tf.keras.layers.Flatten(input_shape=(28, 28)),
+        tf.keras.layers.Dense(128, activation="relu"),
+        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(28, activation="relu"),
+        tf.keras.layers.Dense(10),
     ])
-
-    #set weights
     model.set_weights(weights)
 
-    #use the model to classify each image
-    probs = model.predict(images_test)           # shape (N, 10)
-    label_pred = np.argmax(probs, axis=1)            # shape (N,)
+    # 2) extract ALL images & labels from ds_test into numpy arrays
+    #    (you could do this once outside the function if you call it repeatedly)
+    images_list = []
+    labels_list = []
+    for img, lbl in ds_test:
+        images_list.append(img.numpy())
+        labels_list.append(lbl.numpy())
+    images_test = np.stack(images_list)   # shape (10000, 28, 28, 1)
+    labels_test = np.array(labels_list)   # shape (10000,)
 
-    # Compute accuracy for each digit 0–9
+    # 3) run your predictions
+    probs      = model.predict(images_test)                # (10000, 10)
+    label_pred = np.argmax(probs, axis=1)                  # (10000,)
+
+    # 4) compute per-digit accuracy
     digits = np.arange(10)
-    #loop over each digit i
-    #for each digit labelled i, count how many we correctly classify as i
-    accuracy_per_digit = [np.mean(label_pred[label_test == i] == i) for i in digits]
+    accuracy_per_digit = [
+        np.mean(label_pred[labels_test == d] == d)
+        for d in digits
+    ]
 
-    # Plot as a bar chart
+    # 5) plot
     plt.figure(figsize=(8, 6))
-    plt.bar(digits, accuracy_per_digit, color='skyblue')
+    plt.bar(digits, accuracy_per_digit, color="skyblue")
     plt.xticks(digits)
     plt.xlabel("Digit")
     plt.ylabel("Accuracy")
     plt.title("Per‐Digit Test Accuracy")
     plt.ylim(0, 1)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
     plt.tight_layout()
     plt.show()

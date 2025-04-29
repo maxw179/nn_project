@@ -16,7 +16,7 @@ num_neurons = np.sum(layer_sizes) # = 1014
 blocks = np.r_[0, np.cumsum(layer_sizes)]   # e.g. [0, 784, 912, 976, 1004, 1014]
 
 #zero_eigenvals is the eigenvalue list
-def zero_net(zero_eigenvals = [0]):
+def zero_net(zero_eigenvals = []):
     A, D, L = get_laplacian()
     # Compute eigenvalues and eigenvectors of the Laplacian
     eigenvalues, eigenvectors = linalg.eigh(L)
@@ -45,7 +45,7 @@ def reconstruct_weights(L_reconstructed):
 
         #get reconstructed weights from the reconstructed Laplacian
         W_recons = L_reconstructed[first_row : last_row , first_col : last_col] 
-        weights_recons.append(W_recons)
+        weights_recons.append(-W_recons)
     
     model = []
     for i in range(4):
