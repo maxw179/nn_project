@@ -1,7 +1,7 @@
 import numpy as np
 
 # Given a weight matrix and list of singular value indices, 
-# perform SVD on W and remove singular vectors corresponding to sigma indices. 
+# perform SVD on W and set singular vectors corresponding to sigma indicest to 0. 
 # Return the updated, reduced weight matrix.
 def weights_svd(W, sigma_indices):
     # Perform SVD on W.
@@ -11,13 +11,17 @@ def weights_svd(W, sigma_indices):
     Sigma = np.zeros((W.shape[0], W.shape[1]))
     np.fill_diagonal(Sigma, S)
 
-    # Remove singular vectors corresponding to sigma indices.
-    U_reduced = np.delete(U, sigma_indices)
-    VT_reduced = np.delete(VT, sigma_indices)
-    Sigma_reduced = np.delete(Sigma, sigma_indices)
+    # Set singular vectors corresponding to sigma indices to 0.
+    U[:, sigma_indices] = 0
+    S[sigma_indices] = 0
+    VT[sigma_indices, :] = 0
+
+    # Construct singular value matrix (Sigma)
+    Sigma = np.zeros((W.shape[0], W.shape[1]))
+    np.fill_diagonal(Sigma, S)
 
     # Construct reduced weight matrix
-    W_reduced = np.dot(U_reduced, np.dot(Sigma_reduced, VT_reduced))
+    W_reduced = np.dot(U, np.dot(Sigma, VT))
 
 
     # Return reduced weight matrix
