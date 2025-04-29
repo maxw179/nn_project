@@ -82,3 +82,77 @@ model.set_weights(new_weights)  # Apply the modified weights
 # Evaluate the model on the test set using the modified weights
 test_loss, test_acc = model.evaluate(X_test, y_test)
 print(f'Test accuracy after modification: {test_acc}')
+
+# -------------------------------
+# Step 12: Test top 20 eigenvectors’ importance
+# -------------------------------
+
+# 1) Save original weights & compute baseline accuracy
+original_weights = model.get_weights()
+baseline_acc = model.evaluate(X_test, y_test, verbose=0)[1]
+
+# 2) Identify the indices of the top 20 eigenvalues (largest → smallest)
+top20_idx = np.argsort(eigenvalues)[-20:][::-1]  # descending order
+
+# 3) Loop over those top 20 eigenvectors
+accuracy_drops_top20 = []
+for i in top20_idx:
+    # a) Zero out the i-th eigenvalue
+    modified_eigs = eigenvalues.copy()
+    modified_eigs[i] = 0
+
+    # b) Reconstruct the filtered Laplacian
+    filtered_mat = eigenvectors @ np.diag(modified_eigs) @ eigenvectors.T
+
+    # c) Apply to first layer’s weights
+    W1_filtered = W1 @ filtered_mat
+
+    # d) Swap in modified weights
+    temp_weights = original_weights.copy()
+    temp_weights[0] = W1_filtered
+    model.set_weights(temp_weights)
+
+    # e) Evaluate and record drop
+    _, acc_mod = model.evaluate(X_test, y_test, verbose=0)
+    accuracy_drops_top20.append(baseline_acc - acc_mod)
+
+# 4) Restore original weights
+model.set_weights(original_weights)
+
+# 5) Plot importance of those top 20 components
+plt.figure(figsize=(10, 6))
+plt.bar(range(20), accuracy_drops_top20)
+plt.xticks(range(20), top20_idx, rotation=45)
+plt.xlabel("Eigenvector index")
+plt.ylabel("Accuracy drop when removed")
+plt.title("Importance of Top 20 Spectral Components")
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.show()
+
+# -------------------------------
+# Step 13: Per‐digit test accuracy bar chart
+# -------------------------------
+
+# 1) Get predicted labels on the test set
+probs = model.predict(X_test)                # shape (N, 10)
+y_pred = np.argmax(probs, axis=1)            # shape (N,)
+
+# 2) Compute accuracy for each digit 0–9
+classes = np.arange(10)
+per_class_acc = [
+    np.mean(y_pred[y_test == i] == i)
+    for i in classes
+]
+
+# 3) Plot as a bar chart
+plt.figure(figsize=(8, 6))
+plt.bar(classes, per_class_acc, color='skyblue')
+plt.xticks(classes)
+plt.xlabel("Digit")
+plt.ylabel("Accuracy")
+plt.title("Per‐Digit Test Accuracy")
+plt.ylim(0, 1)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()
