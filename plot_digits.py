@@ -5,6 +5,7 @@
 from matplotlib import pyplot as plt
 import tensorflow_datasets as tfds
 import tensorflow as tf
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import numpy as np
 
 '''
@@ -74,5 +75,44 @@ def plot_digits(weights):
     plt.title("Per‐Digit Test Accuracy")
     plt.ylim(0, 1)
     plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_confusion(weights):
+    """this function takes in a list of weights and graphs the confusion matrix on ds_test"""
+
+    # 1) build & set up your model
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(28, 28)),
+        tf.keras.layers.Dense(128, activation="relu"),
+        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(28, activation="relu"),
+        tf.keras.layers.Dense(10),
+    ])
+    model.set_weights(weights)
+
+    # 2) extract ALL images & labels from ds_test into numpy arrays
+    images_list, labels_list = [], []
+    for img, lbl in ds_test:
+        images_list.append(img.numpy())
+        labels_list.append(lbl.numpy())
+    images_test = np.stack(images_list)   # (num_samples, 28, 28, 1)
+    labels_test = np.array(labels_list)   # (num_samples,)
+
+    # 3) run your predictions
+    probs      = model.predict(images_test)  # (num_samples, 10)
+    label_pred = np.argmax(probs, axis=1)    # (num_samples,)
+
+    # 4) compute confusion matrix
+    digits = np.arange(10)
+    cm = confusion_matrix(labels_test, label_pred, labels=digits)
+
+    # 5) plot confusion matrix
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=digits)
+    fig, ax = plt.subplots(figsize=(8, 8))
+    disp.plot(cmap=plt.cm.Blues, ax=ax, colorbar=True)
+    ax.invert_yaxis()
+    ax.set_title("MNIST Test Confusion Matrix")
     plt.tight_layout()
     plt.show()
