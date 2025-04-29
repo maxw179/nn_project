@@ -116,3 +116,29 @@ def plot_confusion(weights):
     ax.set_title("MNIST Test Confusion Matrix")
     plt.tight_layout()
     plt.show()
+
+def evaluate_model(weights):
+        # 1) build & set up your model
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(28, 28)),
+        tf.keras.layers.Dense(128, activation="relu"),
+        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dense(28, activation="relu"),
+        tf.keras.layers.Dense(10),
+    ])
+    model.set_weights(weights)
+
+    # 2) extract ALL images & labels from ds_test into numpy arrays
+    images_list, labels_list = [], []
+    for img, lbl in ds_test:
+        images_list.append(img.numpy())
+        labels_list.append(lbl.numpy())
+    images_test = np.stack(images_list)   # (num_samples, 28, 28, 1)
+    labels_test = np.array(labels_list)   # (num_samples,)
+
+    # 3) run your predictions
+    probs      = model.predict(images_test)  # (num_samples, 10)
+    label_pred = np.argmax(probs, axis=1)    # (num_samples,)
+    MSE = np.mean((label_pred - labels_test)**2)
+    accuracy = np.size(np.where(label_pred == labels_test))/10000
+    return MSE, accuracy
